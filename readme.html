@@ -1,0 +1,552 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Zen Cart&reg;/Bulletin Board Integration via Notifier Hooks</title>
+
+<style type="text/css">
+<!--
+a, a:active, a:visited { color: #006666; text-decoration: none; }
+a:hover { color:#00CC99; text-decoration: underline; }
+BODY, P, H1, H2, H3, H4, H5, H6, LI, TD, DD, DT, ul, ol { 
+  font-family: Verdana, AvantGarde, Tahoma, Arial, sans-serif;
+  font-size: 10pt;
+  color: black;
+  padding: 0px;
+  margin: 20px;
+}
+H1, H2, H3, H4 { font-weight: bold; padding: 7px; }
+h1 { font-size: 20px; }
+h2 { font-size: 16px; background-color: #ababab; border: 1px solid #505050; }
+h3 { background-color: #ebebeb; border: 1px solid #7b7b7b; }
+h4 { background-color: #d2d2d2; border: 1px solid #ebebeb; margin: 20px 10px 0px 40px;}
+pre { padding-left: 25px; }
+ol li { margin-left: 0; }
+.corefile { color: red; }
+.removed { text-decoration: line-through; }
+.minspacing li { margin: 0; }
+ol li, ul li, ol li ul, ul li ul, ol li ol, ul li ol, ol li ul li, ol li ol li, ul li ul li, ul li ol li { margin-top: 5px; margin-bottom: 5px; }
+ul li ul { padding-left: 0; }
+.level1 { padding-left: 20px; }
+.table { display: table; font-size: 9pt; margin: 0 20px; }
+.table_inner { margin: 10px 0 0; }
+.head_outer, .item_outer { display: table-row; }
+.thead, .item { display: table-cell; padding: 5px 10px;}
+.head_outer { font-weight: bold; }
+.table ul { list-style-type: none; padding-left: 0; margin: 0; }
+.table ul li { margin: 0; }
+.c1 {}
+.c2 {}
+.c3 {}
+.c3a, .c4, .c5 { text-align: center;}
+.c5 {}
+.table_inner .c1 { width: 200px; }
+.table_inner .c2 { width: 150px; }
+.table_inner .c3 {}
+.head_outer { background-color: #d2d2d2; }
+.odd { background-color: #ebebeb;}
+.desc { margin: 0 10px 0 40px; border: 1px solid #d2d2d2; border-top-style: none; }
+.desc p { margin: 10px; }
+.elmt { padding: 10px; background-color: #ebebeb; margin: 10px;}
+.title { font-weight: bold; }
+.desc pre { background-color: white; border: 1px solid black; padding: 5px; }
+#functions .c4 { text-align: left; }
+#functions .c2, #functions .c3 { text-align: center; }
+-->
+</style>
+</head>
+
+<body>
+<a name="top" id="top"></a>
+<h1>Zen Cart&reg;/Bulletin Board Integration via Notifier Hooks</h1>
+<h3>Version 1.2.0 by lat9</h3>
+<p>Support Thread: <a href="http://www.zen-cart.com/showthread.php?204807-Zen-Cart-Bulletin-Board-Integration-Support-Thread">http://www.zen-cart.com/showthread.php?204807-Zen-Cart-Bulletin-Board-Integration-Support-Thread</a></p>
+
+<h2>Version History:</h2>
+<ul>
+  <li>v1.0.0, 2013-01-04, Beta 1 release</li>
+  <li>v1.0.0, 2013-01-14, Initial release<ul>
+    <li>Added optional customization capability to include bulletin-board-specific text to the create_account "Welcome" email and to the create_account_success page.</li>
+    <li>Moved /includes/auto_loaders/config.core.php to /includes/auto_loaders/overrides/config.core.php.</li>
+    <li>Provided more interface clarification in the readme.html.</li>
+  </ul></li>
+  <li>v1.1.0, 2013-01-22, Instantiation interface required modification to ensure that one and only one bulletin-board observer is installed:<ul>
+    <li>A bulletin-board observer must use the class's <em>is_enabled()</em> function to ensure that it does not complete its installation if another bulletin-board observer is already installed.</li>
+    <li>A successfully-installed bulletin-board observer must use the class's <em>set_enabled()</em> function to register its presence.</li>
+    <li>*BUGFIX* Corrected interface version initialization, v1.0.0 returns "BB_VERSION_MAJOR.BB_VERSION_MINOR".</li>
+    <li>*BUGFIX* v1.0.0 mistakenly included the file /includes/auto_loaders/config.core.php, a core-file overwrite.  This file is not needed (it's a copy of the file in the associated /overrides directory) and has been removed.</li>
+  </ul></li>
+  <li>v1.2.0, 2013-02-16<ul>
+    <li>Modifications to allow the forum "Nick Name" to be optional, allowing customers to opt-in to forum registration.</li>
+    <li>Added two functions to allow additional messages to be passed between the bulletin board observer and the bulletin board "core" code.</li>
+    <li>*BUGFIX* Incorrect closing quote on message in /includes/languages/english/extra_definitions/YOUR_TEMPLATE/bb_definitions.php.</li>
+  </ul></li>
+  <li>v1.3.0, 2013-11-29, Updated to include downwardly-compatible changes introduced in v1.5.2:<ul>
+    <li>/includes/modules/pages/account_edit/header_php.php</li>
+    <li>/includes/modules/sideboxes/YOUR_TEMPLATE/information.php</li>
+    <li>/includes/templates/YOUR_TEMPLATE/tpl_site_map_default.php</li>
+  </ul></li>
+</ul>
+
+<hr />
+<h2>What It Does</h2>
+<p>This plugin converts the Zen Cart bulletin-board integration (as of v1.5.1 via /includes/classes/class.phpbb.php) to a collection of notifier hooks, allowing other plugins to be written using observer-class scripts to integrate various bulletin boards into Zen Cart. It provides the <em>framework</em> into which a bulletin-board can be integrated &mdash; it provides no functionality other than the standardized interface. The idea came from <a href="http://www.zen-cart.com/showthread.php?204139-account_edit-Duplicate-phpbb-email-addresses-allowed" target="_blank">this</a> thread on the Zen Cart forums.</p>
+<p>Starting with v1.2.0 of the interface, you can specify that the "Nick Name" field is optional during customer account registration by setting the value of your admin's <em>Configuration-&gt;Minimum Values-&gt;Nick Name</em> to <b>0</b>.  If that value is set to 0 and the customer does not specify a <em>Nick Name</em> during the registration process, then there is no further reference to a forum <em>Nick Name</em> within that customer's account information.</p>
+<p><strong>Note:</strong> The interface is designed to support <em>one and only one</em> installed bulletin-board interface for a given Zen Cart installation.</p>
+<p>Some Zen Cart <span class="corefile">core files</span> have been modified to make use of this <em>framework</em>, making it seamless for a bulletin-board to "plug into" Zen Cart. Specifically, Zen Cart page-related processing has been changed to enable the following bulletin-board integration:</p>
+<div class="table">
+  <div class="head_outer">
+    <div class="thead c1">Zen Cart Page</div>
+    <div class="thead c2">If a Bulletin-Board is Enabled &hellip;</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1">account_edit</div>
+    <div class="item c2">&hellip; and the customer's account has a non-blank <em>Nick Name</em> value, this page's processing makes sure that the <strong>Email Address</strong> specified by the customer is not associated with any <em>other</em> account in the enabled bulletin board. If the customer's account information is changed in their Zen Cart account, their email address is updated in their bulletin board account.</div>
+  </div>
+ 
+  <div class="item_outer odd">
+    <div class="item c1">account_password</div>
+    <div class="item c2">&hellip; and the customer's account has a non-blank <em>Nick Name</em> value, if the customer changes the <strong>Password</strong> associated with their Zen Cart account, the password is also changed in their bulletin board account.</div>
+  </div>
+  
+  <div class="item_outer">
+    <div class="item c1">create_account</div>
+    <div class="item c2">&hellip; this page's processing depends on your admin's <em>Configuration-&gt;Minimum Values-&gt;Nick Name</em> setting and whether a <em>Nick Name</em> value is specified by the customer:
+      <div class="table table_inner">
+      
+        <div class="head_outer">
+          <div class="thead c1">Minimum Values-&gt;Nick Name</div>
+          <div class="thead c2">Nick Name Specified?</div>
+          <div class="thead c3">Page Processing</div>
+        </div>
+        
+        <div class="item_outer">
+          <div class="item c1">N/A</div>
+          <div class="item c2">Yes</div>
+          <div class="item c3">Verifies that neither the <strong>Email Address</strong> nor <strong>Nick Name</strong> values specified are associated with any account in the bulletin board. If a Zen Cart customer account is successfully created, a bulletin board account is created with the same "Nick Name", "Email Address" and "Password".  If the value for <strong>BB_EMAIL_WELCOME</strong> is defined, the store's "welcome email" includes that text. That definition is located in /includes/languages/english/extra_definitions/YOUR_TEMPLATE/bb_definitions.php.</div>
+        </div>
+        
+        <div class="item_outer odd">
+          <div class="item c1">&gt; 0</div>
+          <div class="item c2">No</div>
+          <div class="item c3">Not allowed.  An error message is issued and the customer must specify a non-blank <em>Nick Name</em>.</div>
+        </div>
+         
+        <div class="item_outer">
+          <div class="item c1">0</div>
+          <div class="item c2">No</div>
+          <div class="item c3">The page's processing completes as if the bulletin board linkage was not present.</div>
+        </div>
+       
+      </div>
+    </div>
+  </div>
+ 
+  <div class="item_outer odd">
+    <div class="item c1">create_account_success</div>
+    <div class="item c2">&hellip; the customer has specified a non-blank <em>Nick Name</em> value and the value for <strong>BB_TEXT_ACCOUNT_CREATED</strong> is defined, the text from that definition is appended to the page's main-content. That definition is located in /includes/languages/english/extra_definitions/YOUR_TEMPLATE/bb_definitions.php.</div>
+  </div> 
+ 
+  <div class="item_outer">
+    <div class="item c1">password_forgotten</div>
+    <div class="item c2">&hellip; and the customer's account has a non-blank <em>Nick Name</em> value, when the customer requests a new password the password identified in the email sent by Zen Cart processing becomes the new password for both their Zen Cart and bulletin board accounts.</div>
+  </div>
+  
+</div>
+
+<h2>Interface Specification</h2>
+<p>A new class &mdash; <em>bb</em> &mdash; is created and an instance of this class (<em>$bb</em>) is created during the Zen Cart start-up processing. Any bulletin-board observer class that desires to plug into this class must install itself at Breakpoint 54 using an autoload configuration file; for example, the sample code that allows phpBB&reg; integration into Zen Cart via this interface installs itself via the following statements:</p>
+<pre>
+  $autoLoadConfig[54][] = array('autoType'=>'class',
+                                'loadFile'=>'observers/class.phpbb_observer.php');
+  $autoLoadConfig[54][] = array('autoType'=>'classInstantiate',
+                                'className'=>'phpbb_observer',
+                                'objectName'=>'phpbb_observer');
+</pre>
+<p><strong>Note:</strong> It is the responsibility of the Zen Cart store owner to ensure that one and only one bulletin-board observer is installed on the interface at any one time, or the results are unpredictable. Starting with v1.1.0 of this interface, properly coded bulletin board observers can also enforce this restriction.</p>
+
+<h3>Function Definitions</h3>
+<p>This section identifies the functions provided by the <em>bb</em> class for use by Zen Cart page processing and the bulletin-board observer classes:</p>
+<div class="table" id="functions">
+  <div class="head_outer">
+    <div class="thead c1">Function Name</div>
+    <div class="thead c2">Page Processing</div>
+    <div class="thead c3">BB Observer</div>
+    <div class="thead c4">Description</div>
+    <div class="thead c5">Version</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1"><a href="#bb">bb</a></div>
+    <div class="item c2">&nbsp;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Class constructor.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+ 
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#gv">get_version</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Returns the current interface version.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+  
+  <div class="item_outer">
+    <div class="item c1"><a href="#ie">set_enabled</a></div>
+    <div class="item c2">&nbsp;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Sets the status to indicate that a bulletin board <em>bb</em> is active on the interface.</div>
+    <div class="item c5">v1.1.0 and later</div>
+  </div>
+  
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#ie">is_enabled</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Identifies whether or not a bulletin board is active on the <em>bb</em> interface.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1"><a href="#gbu">get_bb_url</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Returns the URL associated with the active bulletin board.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div> 
+  
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#sbu">set_bb_url</a></div>
+    <div class="item c2">&nbsp;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Sets the URL associated with the active bulletin board.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+  
+  <div class="item_outer">
+    <div class="item c1"><a href="#gbu">get_bb_message</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Returns an additional error message previously set by the active bulletin board.</div>
+    <div class="item c5">v1.2.0 and later</div>
+  </div> 
+  
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#sbu">set_bb_message</a></div>
+    <div class="item c2">&nbsp;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Sets an additional error message to be displayed.</div>
+    <div class="item c5">v1.2.0 and later</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1"><a href="#gbn">get_bb_name</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Returns the name of the active bulletin board.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+  
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#sbn">set_bb_name</a></div>
+    <div class="item c2">&nbsp;</div>
+    <div class="item c3">&radic;</div>
+    <div class="item c4">Sets the name of the active bulletin board.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1"><a href="#ca">create_account</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Creates a user account in the active bulletin board.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>  
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#cnnu">check_nick_not_used</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Checks to see that the specified nickname is not currently used.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1"><a href="#cenu">check_email_not_used</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Checks to see that the specified email address is not currently used.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+  
+  <div class="item_outer odd">
+    <div class="item c1"><a href="#cp">change_password</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Changes the password for the specified nickname.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+ 
+  <div class="item_outer">
+    <div class="item c1"><a href="#ce">change_email</a></div>
+    <div class="item c2">&radic;</div>
+    <div class="item c3">&nbsp;</div>
+    <div class="item c4">Changes the email address for the specified nickname.</div>
+    <div class="item c5">v1.0.0 and later</div>
+  </div>
+  
+</div>
+<h4 id="ca">bb</h4>
+<div class="desc">
+  <p>bb &mdash; Class constructor for the <em>bb</em> class.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">void <strong>bb</strong> (void);</pre>
+    <p class="interface">Invoked via a <em>classInstantiate</em> method in the /includes/auto_loaders/config.core.php file, this function subsequently issues a notifier to allow a <em>single</em> customized bulletin board to integrate with the Zen Cart processing.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Observer Class Interface</div>
+    <pre class="interface">$this->notify('ZEN_BB_INSTANTIATE');</pre>
+    <p class="interface">Requests the initialization of any bulletin-board observer.</p>
+    <p>For interface version v1.0.0 <strong>only</strong>, the observer must return bb:STATUS_OK if the operation completed successfully and communications with the external bulletin board have been established; any other value will be interpreted by this function as an error. If the bb class function return status value is bb:STATUS_OK upon return from the notification, subsequent calls to member function is_enabled will return true; otherwise, that function will return false. See <a href="#oci">Observer Class Programming</a> for the method an observer uses to return a status code.</p>
+    <p>For all other interface versions, the observer must call the <em>bb</em> class member function <a href="#se">set_enabled</a> if the operation completed successfully and communications with the external bulletin board have been established. Subsequent calls to member function <a href="#ie">is_enabled</a> will return <em>true</em> only if the set_enabled function has been previously called.</p>
+  </div>
+</div>
+
+<h4 id="gv">get_version</h4>
+<div class="desc">
+  <p>get_version &mdash; Returns the current interface version for the <em>bb</em> class.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">string <strong>get_version</strong> (void);</pre>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns a string containing the current interface version for the <em>bb</em> class, one of:</p></ul>
+      <li>BB_VERSION_MAJOR.BB_VERSION_MINOR &mdash; The initial release of the interface.</li>
+      <li>1.1.0 &mdash; The version in which the instantiation interface was changed to ensure that one and only one bulletin board observer is successfully installed.</li>
+    </ul>
+  </div>
+</div>
+
+<h4 id="se">set_enabled</h4>
+<div class="desc">
+  <p>set_enabled &mdash; Sets the indication that a bulletin board is active on the <em>bb</em> interface. This function was added for interface version "1.1.0".</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">void <strong>set_enabled</strong> (void);</pre>
+  </div>
+</div>
+
+<h4 id="ie">is_enabled</h4>
+<div class="desc">
+  <p>is_enabled &mdash; Identifies whether or not a bulletin board is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">bool <strong>is_enabled</strong> (void);</pre>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns <strong>true</strong> if a bulletin board's observer class has been successfully instantiated, <strong>false</strong> otherwise.</p>
+  </div>
+</div>
+
+<h4 id="gbu">get_bb_url</h4>
+<div class="desc">
+  <p>get_bb_url &mdash; Returns the URL for the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">string <strong>get_bb_url</strong> (void);</pre>
+    <p class="interface">The value returned should be used in conjunction with function <strong>zen_href_link</strong> to create a full URL to the active bulletin board.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns a strong containing the value previously set by an active bulletin board's observer class via call to member function <a href="#sbu">set_bb_url</a>. If no observer class has set the value, returns <strong>FILENAME_PAGE_NOT_FOUND</strong>.</p>
+  </div>
+</div>
+
+<h4 id="sbu">set_bb_url</h4>
+<div class="desc">
+  <p>set_bb_url &mdash; Sets the URL for the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">void <strong>set_bb_url</strong> (string);</pre>
+    <p class="interface">Used by a bulletin board observer to set the URL to be used for a Zen Cart script to link to the bulletin board. The value is returned by subsequent call to member function <a href="#gbu">get_bb_url</a>. The value should only be set by the observer if the class instantiation was successful.</p>
+  </div>
+</div>
+
+<h4 id="gbm">get_bb_message</h4>
+<div class="desc">
+  <p>get_bb_message &mdash; Returns an error message previously set by the bulletin board that is active on the <em>bb</em> interface, v1.2.0+</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">string <strong>get_bb_message</strong> (void);</pre>
+    <p class="interface">If the value returned by call to either <a href="#cnnu">check_nick_not_used</a> or <a href="#cenu">check_email_not_used</a> is not <em>bb::STATUS_OK</em>, the bulletin board observer (v1.2.0 and later) might have set an additional message to be displayed to the customer.  The value returned, if not '', should be displayed as an error to the customer.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns a strong containing the value previously set by an active bulletin board's observer class via call to member function <a href="#sbm">set_bb_message</a>. If no observer class has set the value, returns <strong>''</strong>.</p>
+  </div>
+</div>
+
+<h4 id="sbm">set_bb_message</h4>
+<div class="desc">
+  <p>set_bb_message &mdash; Sets an error message returned by the bulletin board that is active on the <em>bb</em> interface, v1.2.0+</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">void <strong>set_bb_message</strong> (string);</pre>
+    <p class="interface">Used by a bulletin board observer to set an additional error message to be displayed by the Zen Cart script to provide additional information to the customer in response to either <a href="#cnnu">check_nick_not_used</a> or <a href="#cenu">check_email_not_used</a> request. The value is returned by subsequent call to member function <a href="#gbm">get_bb_message</a>. For example, a bulletin board observer might limit a <em>Nick Name</em> value's maximum length and return an error message indicating as such.</p>
+  </div>
+</div>
+
+<h4 id="gbn">get_bb_name</h4>
+<div class="desc">
+  <p>get_bb_name &mdash; Returns the "common name" for the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">string <strong>get_bb_name</strong> (void);</pre>
+    <p class="interface">The value returned can be used by Zen Cart page processing to identify the "name" of the active bulletin board. For example, the value returned when the phpBB&reg; observer is installed is 'phpBB'.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns a strong containing the value previously set by an active bulletin board's observer class via call to member function <a href="#sbn">set_bb_name</a>. If no observer class has set the value, returns ''.</p>
+  </div>
+</div>
+
+<h4 id="sbn">set_bb_name</h4>
+<div class="desc">
+  <p>set_bb_name &mdash; Sets the "common name" for the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">void <strong>set_bb_name</strong> (string);</pre>
+    <p class="interface">Used by a bulletin board observer to set the "common name" to be used to identify the bulletin board. The value is returned by subsequent call to member function <a href="#gbn">get_bb_name</a>. The value should only be set by the observer if the class instantiation was successful.</p>
+  </div>
+</div>
+
+<h4 id="ca">create_account</h4>
+<div class="desc">
+  <p>create_account &mdash; Creates an account with the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">bb_return <strong>create_account</strong> (string <em>$nickname</em>, string <em>$password</em>, string <em>$email_address</em>);</pre>
+    <p class="interface">Used by Zen Cart page processing to create an account in the active bulletin board.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns the <em>bb</em> class constant <strong>bb::STATUS_OK</strong> if either the active bulletin board account was successfully created or if there is no active bulletin board. Any other value indicates that an error occurred during the processing.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Observer Class Interface</div>
+    <pre class="interface">$this->notify('ZEN_BB_CREATE_ACCOUNT', array('nick' => $nick, 'pwd' => $password, 'email' => $email_address));</pre>
+    <p class="interface">Submits the nickname, unencoded password and email address to be used to create an account in the active bulletin board. The observer must return <strong>bb:STATUS_OK</strong> if the operation completed successfully; any other value should be interpreted by the Zen Cart caller as an error. See <a href="#return">Observer Class Programming</a> for the method an observer uses to return a status code.</p>
+  </div>
+</div>
+
+<h4 id="cnnu">check_nick_not_used</h4>
+<div class="desc">
+  <p>check_nick_not_used &mdash; Verifies that a nickname is not currently used by the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">bb_return <strong>check_nick_not_used</strong> (string <em>$nickname</em>);</pre>
+    <p class="interface">Used by Zen Cart page processing to determine if the specified nickname is unused by the active bulletin board.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns the <em>bb</em> class constant <strong>bb::STATUS_OK</strong> if either the specified nickname is not used by the active bulletin board or if there is no active bulletin board. Any other value indicates that the nickname is either currently being used or failed an additional requirement check.  For v1.2.0 and later, if the value returned is not <em>bb::STATUS_OK</em> the observer might have set an additional error message to be displayed to the customer; see <a href="#gbm">get_bb_message</a> for more information.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Observer Class Interface</div>
+    <pre class="interface">$this->notify('ZEN_BB_CHECK_NICK_NOT_USED', array('nick' => $nick));</pre>
+    <p class="interface">Submits a nickname to see if it is being used in the active bulletin board. The observer must return <strong>bb:STATUS_OK</strong> if the operation completed successfully, the nickname is not in use and is valid for the bulletin board; any other value return implies that the nickname is not valid. See <a href="#return">Observer Class Programming</a> for the method an observer uses to return a status code.</p>
+  </div>
+</div>
+
+<h4 id="cenu">check_email_not_used</h4>
+<div class="desc">
+  <p>check_email_not_used &mdash; Verifies that an email address is not currently in use by the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">bb_return <strong>check_email_not_used</strong> (string <em>$email_address</em> [, string <em>$nick=''</em>]);</pre>
+    <p class="interface">Used by Zen Cart page processing to determine if the specified email address is not in use by the active bulletin board. If the optional second parameter (<em>$nick</em>) is specified and non-null, successful return identifies that the email address is not used for any account other than one with a nickname of <em>$nick</em>; otherwise, successful return of the function identifies that the email address is not used for <strong>any</strong> account.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns the <em>bb</em> class constant <strong>bb::STATUS_OK</strong> if either the specified email address is not in use by the active bulletin board or if there is no active bulletin board. Any other value indicates that the email address is currently being used or failed an additional requirement check.  For v1.2.0 and later, if the value returned is not <em>bb::STATUS_OK</em> the observer might have set an additional error message to be displayed to the customer; see <a href="#gbm">get_bb_message</a> for more information.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Observer Class Interface</div>
+    <pre class="interface">$this->notify('ZEN_BB_CHECK_EMAIL_NOT_USED', array('email' => $email_address, 'nick' => $nick));</pre>
+    <p class="interface">Submits an email address to see if it is being used in the active bulletin board. The observer must return <strong>bb:STATUS_OK</strong> if the operation completed successfully and the email address is not in use; any other value return implies that the email address is either in use or is not valid for the active bulletin board. See <a href="#return">Observer Class Programming</a> for the method an observer uses to return a status code.</p>
+  </div>
+</div>
+
+<h4 id="cp">change_password</h4>
+<div class="desc">
+  <p>change_password &mdash; Requests that an account password be changed in the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">bb_return <strong>change_password</strong> (string <em>$nick</em> , string <em>$password</em>);</pre>
+    <p class="interface">Used by Zen Cart page processing to request a password change for the account associated with the nickname specified. The <em>$password</em> input is the unencoded new password.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns the <em>bb</em> class constant <strong>bb::STATUS_OK</strong> if either the password change was successful or if there is no active bulletin board.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Observer Class Interface</div>
+    <pre class="interface">$this->notify('ZEN_BB_CHANGE_PASSWORD', array('nick' => $nick, 'pwd' => $newpassword));</pre>
+    <p class="interface">Submits a nickname for which the account password is to be changed in the active bulletin board. The observer must return <strong>bb:STATUS_OK</strong> if the operation completed successfully and the password change was successful. See <a href="#return">Observer Class Programming</a> for the method an observer uses to return a status code.</p>
+  </div>
+</div>
+
+<h4 id="ce">change_email</h4>
+<div class="desc">
+  <p>change_email &mdash; Requests that an account email address be changed in the bulletin board that is active on the <em>bb</em> interface.</p>
+  <div class="elmt">
+    <div class="title">Description</div>
+    <pre class="interface">bb_return <strong>change_email</strong> (string <em>$nick</em> , string <em>$email_address</em>);</pre>
+    <p class="interface">Used by Zen Cart page processing to request an email address change for the account associated with the nickname specified.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Return Values</div>
+    <p class="interface">Returns the <em>bb</em> class constant <strong>bb::STATUS_OK</strong> if either the email address change was successful or if there is no active bulletin board.</p>
+  </div>
+  <div class="elmt">
+    <div class="title">Observer Class Interface</div>
+    <pre class="interface">$this->notify('ZEN_BB_CHANGE_EMAIL', array('nick' => $nick, 'email' => $email_address));</pre>
+    <p class="interface">Submits a nickname for which the account email address is to be changed in the active bulletin board. The observer must return <strong>bb:STATUS_OK</strong> if the operation completed successfully and the email address change was successful. See <a href="#return">Observer Class Programming</a> for the method an observer uses to return a status code.</p>
+  </div>
+</div>
+
+<h3 id="return">Observer Class Programming</h3>
+<p>The <em>bb</em> class observer interface requires that the observer's class be instantiated at Breakpoint 54 during the Zen Cart auto-load process.  This breakpoint is after the <em>bb</em> class file has been loaded, but prior to the <em>bb</em> class being instantiated &mdash; it is during the class instantiation that <em>bb</em> issues the class-instantiation notifier &hellip; it only happens once per Zen Cart page!</p>
+<p>The class provides the parameters required for each notifier "call" through an associative array that is subsequently passed to the observer's <strong>update</strong> function via the $paramArray input. On return, a properly operating observer will set the <em>bb</em> class's <strong>return_status</strong> variable to reflect the completion status of the "call", either <em>bb::STATUS_OK</em> or <em>bb::STATUS_ERROR</em>. If the observer returns <em>bb::STATUS_ERROR</em>, an additional variable <strong>error_status</strong> can be set to identify further error information.</p>
+
+<hr />
+<h2>Installation</h2>
+<p>There are <span class="corefile">core-file overwrites</span> in this plugin; you should <strong>always</strong> backup your databases and files prior to making any changes.</p>
+<ol class="level1">
+   <li>Copy these files to your cart, after renaming the &quot;YOUR_TEMPLATE&quot; directories to match your custom template's name; core file overwrites are identified like <span class="corefile">this</span>:
+  <ol>
+    <li>/includes/overrides/auto_loaders/config.core.php</li>
+    <li>/includes/classes/class.bb.php</li>
+    <li>/includes/languages/english/extra_definitions/YOUR_TEMPLATE/bb_definitions.php</li>
+    <li class="corefile">/includes/modules/pages/account_edit/header_php.php</li>
+    <li class="corefile">/includes/modules/pages/account_password/header_php.php</li>
+    <li>/includes/modules/pages/create_account_success/header_php_bb.php</li>
+    <li class="corefile">/includes/modules/pages/password_forgotten/header_php.php</li>
+    <li>/includes/modules/sideboxes/YOUR_TEMPLATE/information.php</li>
+    <li>/includes/modules/YOUR_TEMPLATE/create_account.php</li>
+    <li>/includes/templates/YOUR_TEMPLATE/templates/tpl_account_edit_default.php</li>
+    <li>/includes/templates/YOUR_TEMPLATE/templates/tpl_create_account_success_default.php</li>
+    <li>/includes/templates/YOUR_TEMPLATE/templates/tpl_modules_create_account.php</li>
+    <li>/includes/templates/YOUR_TEMPLATE/templates/tpl_site_map_default.php</li>
+  </ol></li>
+</ol>
+
+<hr />
+<h2>Un-install</h2>
+<p>Replace <span class="corefile">core files</span> that were previously overwritten and then delete the new files that were previously copied.</p>
+</body>
+</html>
