@@ -17,21 +17,21 @@ if (!defined('IS_ADMIN_FLAG')) {
 }
 
 define('ZEN_BB_VERSION_MAJOR', '1');
-define('ZEN_BB_VERSION_MINOR', '2.0');  /* v1.2.0-c-lat9 */
+define('ZEN_BB_VERSION_MINOR', '5.1');
 
   class bb extends base {
     protected $version;
     protected $installed;
     protected $bb_url;
     protected $bb_name;
-    protected $bb_message;  /*v1.2.0-a-lat9*/
+    protected $bb_message;
     const STATUS_OK = 'ok';
     const STATUS_NOT_INSTALLED = 'not_installed';
     const STATUS_ERROR = 'error';
     var $return_status;
     var $error_status;  // If a bulletin-board handler returns STATUS_ERROR, additional information can be set here.
 
-    function bb() {
+    function __construct () {
       $this->installed = false;
       $this->bb_url = FILENAME_PAGE_NOT_FOUND;
       $this->bb_name = '';

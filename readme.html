@@ -2,6 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="viewport" content="initial-scale=1" />
 <title>Zen Cart&reg;/Bulletin Board Integration via Notifier Hooks</title>
 
 <style type="text/css">
@@ -60,7 +61,7 @@ ul li ul { padding-left: 0; }
 <body>
 <a name="top" id="top"></a>
 <h1>Zen Cart&reg;/Bulletin Board Integration via Notifier Hooks</h1>
-<h3>Version 1.5.0 by lat9 &mdash; Supports Zen Cart v1.5.1 to v1.5.4</h3>
+<h3>Version 1.5.1 by lat9 &mdash; Supports Zen Cart v1.5.1 to v1.5.4</h3>
 <p>Support Thread: <a href="http://www.zen-cart.com/showthread.php?204807-Zen-Cart-Bulletin-Board-Integration-Support-Thread">http://www.zen-cart.com/showthread.php?204807-Zen-Cart-Bulletin-Board-Integration-Support-Thread</a></p>
 
 <h2>Version History:</h2>
@@ -97,18 +98,19 @@ ul li ul { padding-left: 0; }
   </ul><strong>Note:</strong>  This plugin's <a href="#install">installation</a> is now <em>dependent on the version of Zen Cart you are using</em>!</li>
   <li>v1.5.0, 2014-12-20, Updated to include Zen Cart v1.5.4 support. Instead of doing the /overrides/config.core.php, all versions have config.core.php <span class="corefile">overwritten</span>.  Using the /overrides directory for the override makes it more difficult to upgrade.  The following files were changed, <span class="added">added</span> or <span class="removed">removed</span>:<ul>
     <li><span class="added">/zc151/includes/auto_loaders/config.core.php</span></li>
-    <li><span class="removed">/zc151/includes/autoloaders/overrides/config.core.php</span></li>
+    <li><span class="removed">/zc151/includes/auto_loaders/overrides/config.core.php</span></li>
     <li><span class="added">/zc152/includes/auto_loaders/config.core.php</span></li>
-    <li><span class="removed">/zc152/includes/autoloaders/overrides/config.core.php</span></li>
+    <li><span class="removed">/zc152/includes/auto_loaders/overrides/config.core.php</span></li>
     <li><span class="added">/zc153/includes/auto_loaders/config.core.php</span></li>
-    <li><span class="removed">/zc153/includes/autoloaders/overrides/config.core.php</span></li>
+    <li><span class="removed">/zc153/includes/auto_loaders/overrides/config.core.php</span></li>
     <li><span class="added">/zc154/includes/auto_loaders/config.core.php</span></li>
   </ul></li>
+  <li>v1.5.1, 2015-12-06, Update to use PHP 7.0-required name for any class-based constructor function; changed /includes/classes/class.bb.php.</li>
 </ul>
 
 <hr />
 <h2>What It Does</h2>
-<p>This plugin converts the Zen Cart bulletin-board integration (as of v1.5.1 via /includes/classes/class.phpbb.php) to a collection of notifier hooks, allowing other plugins to be written using observer-class scripts to integrate various bulletin boards into Zen Cart. It provides the <em>framework</em> into which a bulletin-board can be integrated &mdash; it provides no functionality other than the standardized interface. The idea came from <a href="http://www.zen-cart.com/showthread.php?204139-account_edit-Duplicate-phpbb-email-addresses-allowed" target="_blank">this</a> thread on the Zen Cart forums.</p>
+<p>This plugin converts the Zen Cart bulletin-board integration (as of Zen Cart v1.5.1 via /includes/classes/class.phpbb.php) to a collection of notifier hooks, allowing other plugins to be written using observer-class scripts to integrate various bulletin boards into Zen Cart. It provides the <em>framework</em> into which a bulletin-board can be integrated &mdash; it provides no functionality other than the standardized interface. The idea came from <a href="http://www.zen-cart.com/showthread.php?204139-account_edit-Duplicate-phpbb-email-addresses-allowed" target="_blank">this</a> thread on the Zen Cart forums.</p>
 <p>Starting with v1.2.0 of the interface, you can specify that the "Nick Name" field is optional during customer account registration by setting the value of your admin's <em>Configuration-&gt;Minimum Values-&gt;Nick Name</em> to <b>0</b>.  If that value is set to 0 and the customer does not specify a <em>Nick Name</em> during the registration process, then there is no further reference to a forum <em>Nick Name</em> within that customer's account information.</p>
 <p><strong>Note:</strong> The interface is designed to support <em>one and only one</em> installed bulletin-board interface for a given Zen Cart installation.</p>
 <p>Some Zen Cart <span class="corefile">core files</span> have been modified to make use of this <em>framework</em>, making it seamless for a bulletin-board to "plug into" Zen Cart. Specifically, Zen Cart page-related processing has been changed to enable the following bulletin-board integration:</p>
